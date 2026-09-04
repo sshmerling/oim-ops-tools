@@ -1,0 +1,1169 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>LP Explorer — OIM 310</title>
+<style>
+  :root{
+    --ink:#1b2430;
+    --ink-soft:#4a5568;
+    --paper:#fbfaf7;
+    --panel:#ffffff;
+    --line:#d8dce3;
+    --accent:#8a3b2a;
+    --accent-soft:#c9704f;
+    --feasible:#2f6f5e;
+    --feasible-fill:rgba(47,111,94,0.14);
+    --optimal:#8a3b2a;
+    --grid:#e7e4dc;
+    --mono: "IBM Plex Mono", "SF Mono", Menlo, Consolas, monospace;
+    --serif: "Source Serif 4", "Georgia", serif;
+    --sans: "Inter", "Segoe UI", system-ui, sans-serif;
+  }
+  *{box-sizing:border-box;}
+  body{
+    margin:0;
+    font-family:var(--sans);
+    background:var(--paper);
+    color:var(--ink);
+  }
+  header{
+    padding:22px 28px 16px;
+    border-bottom:1px solid var(--line);
+    background:var(--panel);
+  }
+  header h1{
+    font-family:var(--serif);
+    font-weight:600;
+    font-size:26px;
+    margin:0 0 4px;
+    letter-spacing:-0.01em;
+  }
+  header p{
+    margin:0;
+    color:var(--ink-soft);
+    font-size:14.5px;
+    max-width:70ch;
+  }
+  .layout{
+    display:grid;
+    grid-template-columns:360px 1fr;
+    gap:0;
+    min-height:calc(100vh - 92px);
+  }
+  .sidebar{
+    border-right:1px solid var(--line);
+    background:var(--panel);
+    padding:20px;
+    overflow-y:auto;
+    max-height:calc(100vh - 92px);
+  }
+  .main{
+    padding:24px 28px;
+    overflow-y:auto;
+    max-height:calc(100vh - 92px);
+  }
+  section{margin-bottom:22px;}
+  section > h2{
+    font-size:13px;
+    text-transform:none;
+    letter-spacing:0.01em;
+    font-weight:600;
+    color:var(--ink);
+    margin:0 0 10px;
+    padding-bottom:6px;
+    border-bottom:1px solid var(--line);
+  }
+  label{
+    display:block;
+    font-size:12.5px;
+    color:var(--ink-soft);
+    margin-bottom:3px;
+  }
+  input[type=text], input[type=number], select{
+    width:100%;
+    padding:6px 8px;
+    border:1px solid var(--line);
+    border-radius:4px;
+    font-size:13.5px;
+    font-family:var(--sans);
+    background:#fff;
+    color:var(--ink);
+  }
+  input[type=number]{font-family:var(--mono);}
+  .row{
+    display:grid;
+    grid-template-columns:1fr 1fr;
+    gap:8px;
+    margin-bottom:8px;
+  }
+  .row3{
+    display:grid;
+    grid-template-columns:1.4fr 0.8fr 0.8fr 0.8fr;
+    gap:6px;
+    margin-bottom:8px;
+    align-items:end;
+  }
+  .constraint-card{
+    border:1px solid var(--line);
+    border-radius:6px;
+    padding:10px 10px 4px;
+    margin-bottom:10px;
+    background:#fdfcfa;
+  }
+  .constraint-card .title-row{
+    display:flex;
+    justify-content:space-between;
+    align-items:center;
+    margin-bottom:6px;
+  }
+  .constraint-card .title-row span{
+    font-size:12px;
+    font-weight:600;
+    color:var(--accent);
+  }
+  .remove-btn{
+    border:none;
+    background:none;
+    color:#9a8f85;
+    cursor:pointer;
+    font-size:12px;
+    text-decoration:underline;
+    padding:0;
+  }
+  button{
+    font-family:var(--sans);
+    cursor:pointer;
+  }
+  .btn-primary{
+    width:100%;
+    padding:10px 14px;
+    background:var(--ink);
+    color:#fff;
+    border:none;
+    border-radius:5px;
+    font-size:13.5px;
+    font-weight:600;
+    margin-top:6px;
+  }
+  .btn-primary:hover{background:#000;}
+  .btn-secondary{
+    width:100%;
+    padding:8px 12px;
+    background:#fff;
+    color:var(--ink);
+    border:1px solid var(--line);
+    border-radius:5px;
+    font-size:13px;
+    margin-top:8px;
+  }
+  .btn-secondary:hover{border-color:var(--ink);}
+  .btn-add{
+    width:100%;
+    padding:7px;
+    background:#fff;
+    border:1px dashed var(--line);
+    border-radius:5px;
+    color:var(--ink-soft);
+    font-size:12.5px;
+    margin-top:2px;
+  }
+  .btn-add:hover{border-color:var(--accent); color:var(--accent);}
+  .slider-block{margin-bottom:14px;}
+  .slider-block .slider-label{
+    display:flex;
+    justify-content:space-between;
+    font-size:12.5px;
+    color:var(--ink);
+    margin-bottom:3px;
+  }
+  .slider-block .slider-label b{
+    font-family:var(--mono);
+    font-weight:600;
+    color:var(--accent);
+  }
+  input[type=range]{
+    width:100%;
+    accent-color:var(--accent);
+  }
+  #graphWrap{
+    background:var(--panel);
+    border:1px solid var(--line);
+    border-radius:8px;
+    padding:14px;
+    display:inline-block;
+  }
+  canvas{display:block;}
+  .summary-box{
+    display:grid;
+    grid-template-columns:repeat(3,1fr);
+    gap:12px;
+    margin:18px 0;
+  }
+  .summary-card{
+    background:var(--panel);
+    border:1px solid var(--line);
+    border-radius:8px;
+    padding:14px 16px;
+  }
+  .summary-card .label{
+    font-size:11.5px;
+    color:var(--ink-soft);
+    margin-bottom:4px;
+  }
+  .summary-card .value{
+    font-family:var(--mono);
+    font-size:19px;
+    color:var(--ink);
+    font-weight:600;
+  }
+  .summary-card.optimal .value{color:var(--accent);}
+  table{
+    width:100%;
+    border-collapse:collapse;
+    font-size:13px;
+    background:var(--panel);
+    border:1px solid var(--line);
+    border-radius:8px;
+    overflow:hidden;
+  }
+  th, td{
+    text-align:left;
+    padding:8px 12px;
+    border-bottom:1px solid var(--line);
+  }
+  th{
+    background:#f3f1ec;
+    font-weight:600;
+    font-size:12px;
+    color:var(--ink-soft);
+  }
+  tr.optimal-row td{
+    background:rgba(138,59,42,0.07);
+    font-weight:600;
+  }
+  .actions-row{
+    display:flex;
+    gap:10px;
+    margin:16px 0;
+  }
+  .actions-row button{
+    flex:1;
+    padding:9px 14px;
+    border-radius:6px;
+    font-size:13px;
+    border:1px solid var(--line);
+    background:#fff;
+  }
+  .actions-row button:hover{border-color:var(--ink);}
+  #warning{
+    display:none;
+    background:#fdf1ec;
+    border:1px solid var(--accent-soft);
+    color:#7a3a24;
+    padding:9px 12px;
+    border-radius:6px;
+    font-size:12.5px;
+    margin-bottom:14px;
+  }
+  .hint{
+    font-size:11.5px;
+    color:#9a8f85;
+    margin-top:2px;
+  }
+  .copy-toast{
+    position:fixed;
+    bottom:20px;
+    left:50%;
+    transform:translateX(-50%);
+    background:var(--ink);
+    color:#fff;
+    padding:8px 16px;
+    border-radius:6px;
+    font-size:13px;
+    opacity:0;
+    transition:opacity 0.25s;
+    pointer-events:none;
+  }
+  .copy-toast.show{opacity:1;}
+  select{background:#fff;}
+  .id-section{
+    background:#fdf6ee;
+    border:1px solid #e7d3b8;
+    border-radius:6px;
+    padding:10px 12px;
+    margin-bottom:18px;
+  }
+  .id-section label{color:#7a5c33; font-weight:600; margin-bottom:4px;}
+  .session-tag{
+    font-family:var(--mono);
+    font-size:11.5px;
+    color:#9a7a45;
+    margin-top:6px;
+  }
+  .slider-settings{
+    display:grid;
+    grid-template-columns:1fr 1fr;
+    gap:6px;
+    margin-top:6px;
+    padding-top:6px;
+    border-top:1px dashed var(--line);
+  }
+  .slider-settings label{font-size:11px; margin-bottom:2px;}
+  .slider-settings input{padding:4px 6px; font-size:12px;}
+  .modal-overlay{
+    display:none;
+    position:fixed; inset:0;
+    background:rgba(27,36,48,0.55);
+    z-index:50;
+    align-items:center;
+    justify-content:center;
+  }
+  .modal-overlay.show{display:flex;}
+  .modal-box{
+    background:#fff;
+    border-radius:10px;
+    padding:20px;
+    width:min(600px, 90vw);
+    max-height:80vh;
+    display:flex;
+    flex-direction:column;
+    gap:10px;
+  }
+  .modal-box h3{margin:0; font-size:15px;}
+  .modal-box p{margin:0; font-size:12.5px; color:var(--ink-soft);}
+  .modal-box textarea{
+    width:100%;
+    height:260px;
+    font-family:var(--mono);
+    font-size:12px;
+    padding:10px;
+    border:1px solid var(--line);
+    border-radius:6px;
+    resize:vertical;
+  }
+  .modal-actions{display:flex; gap:8px; justify-content:flex-end;}
+  .modal-actions button{padding:8px 16px; border-radius:5px; font-size:13px;}
+</style>
+</head>
+<body>
+
+<header>
+  <h1>LP Explorer</h1>
+  <p>Set up a two-variable linear program, then drag the sliders to see how the feasible region, the extreme points, and the optimal solution change. Use the buttons below the graph to save what you find.</p>
+</header>
+
+<div class="layout">
+  <div class="sidebar">
+
+    <div class="id-section">
+      <label>Your name or student ID (stamped on anything you save or copy)</label>
+      <input type="text" id="studentName" placeholder="e.g. Jane Doe">
+      <div class="session-tag" id="sessionTag">session code: —</div>
+    </div>
+
+    <section>
+      <h2>1. Variables</h2>
+      <div class="row">
+        <div><label>x-axis variable name</label><input type="text" id="xName" value="x"></div>
+        <div><label>y-axis variable name</label><input type="text" id="yName" value="y"></div>
+      </div>
+    </section>
+
+    <section>
+      <h2>2. Objective function</h2>
+      <div class="row">
+        <div><label id="cxLabel">Coefficient on x</label><input type="number" id="cx" value="30" step="1"></div>
+        <div><label id="cyLabel">Coefficient on y</label><input type="number" id="cy" value="20" step="1"></div>
+      </div>
+      <div class="slider-settings">
+        <div><label>x-coeff. slider max</label><input type="number" id="cxSliderMax" value="60" step="1"></div>
+        <div><label>x-coeff. slider step</label><input type="number" id="cxSliderStep" value="1" step="0.1"></div>
+      </div>
+      <div class="slider-settings">
+        <div><label>y-coeff. slider max</label><input type="number" id="cySliderMax" value="40" step="1"></div>
+        <div><label>y-coeff. slider step</label><input type="number" id="cySliderStep" value="1" step="0.1"></div>
+      </div>
+      <label style="margin-top:8px;">Goal</label>
+      <select id="objType">
+        <option value="max">Maximize</option>
+        <option value="min">Minimize</option>
+      </select>
+    </section>
+
+    <section>
+      <h2>3. Constraints</h2>
+      <div id="constraintList"></div>
+      <button class="btn-add" id="addConstraint">+ Add constraint</button>
+      <div class="hint">Between 2 and 5 constraints. Non-negativity (x ≥ 0, y ≥ 0) is always included automatically.</div>
+    </section>
+
+    <button class="btn-primary" id="buildBtn">Build / update graph</button>
+
+    <section id="slidersSection" style="margin-top:22px; display:none;">
+      <h2>4. Explore — drag to change the problem</h2>
+      <div id="sliders"></div>
+      <button class="btn-secondary" id="resetBtn">Reset sliders to starting values</button>
+    </section>
+
+  </div>
+
+  <div class="main">
+    <div id="warning"></div>
+
+    <div id="graphWrap">
+      <canvas id="graph" width="700" height="600"></canvas>
+    </div>
+
+    <div class="summary-box" id="summaryBox" style="display:none;">
+      <div class="summary-card">
+        <div class="label">Optimal x, y</div>
+        <div class="value" id="sumXY">—</div>
+      </div>
+      <div class="summary-card optimal">
+        <div class="label">Optimal objective value (Z)</div>
+        <div class="value" id="sumZ">—</div>
+      </div>
+      <div class="summary-card">
+        <div class="label">Binding constraints</div>
+        <div class="value" id="sumBinding" style="font-size:14px;">—</div>
+      </div>
+    </div>
+
+    <div class="actions-row">
+      <button id="exportBtn">Download graph as PNG</button>
+      <button id="copyImgBtn">Copy graph image</button>
+      <button id="copyBtn">Copy scenario summary (table)</button>
+    </div>
+    <div class="hint" style="margin:-8px 0 10px;">Every export is stamped with your name, a session code, and a timestamp.</div>
+
+    <table id="vertexTable" style="display:none;">
+      <thead>
+        <tr><th>Point</th><th>x</th><th>y</th><th>Objective value (Z)</th><th>Binding constraints</th></tr>
+      </thead>
+      <tbody id="vertexTableBody"></tbody>
+    </table>
+
+  </div>
+</div>
+
+<div class="copy-toast" id="toast">Copied to clipboard</div>
+
+<div class="modal-overlay" id="summaryModal">
+  <div class="modal-box">
+    <h3>Scenario summary</h3>
+    <p>This is tab-separated, so pasting it into Word, Excel, or Google Sheets/Docs will line up as a table. If the "Copy" button doesn't work in your browser, click inside the box, select all (Ctrl/Cmd+A), and copy manually.</p>
+    <textarea id="summaryTextarea" readonly></textarea>
+    <div class="modal-actions">
+      <button id="modalCopyBtn" class="btn-primary" style="width:auto;">Copy</button>
+      <button id="modalCloseBtn" class="btn-secondary" style="width:auto;">Close</button>
+    </div>
+  </div>
+</div>
+
+<script>
+// ---------- Starting problem ----------
+// Edit this block to change what the tool opens with. If you want a separate demo file for a
+// different problem, just save a copy of this whole HTML file under a new name and edit this
+// block in the copy — no other changes needed.
+//
+// xLabel/yLabel: axis names.  objType: 'max' or 'min'.  cx, cy: objective coefficients.
+// cxSliderMax/cxSliderStep (optional): fixes the slider range for cx so it stops on round
+// numbers; same idea for cySliderMax/cySliderStep and for each constraint's sliderMax/sliderStep.
+// constraints: list of { name, a, b, dir: 'lte' or 'gte', rhs, sliderMax (optional), sliderStep (optional) }
+const STARTING_PROBLEM = {
+  xLabel: 'x (Product 1)', yLabel: 'y (Product 2)',
+  objType: 'max', cx: 30, cy: 20,
+  cxSliderMax: 60, cxSliderStep: 1, cySliderMax: 40, cySliderStep: 1,
+  constraints: [
+    { name: 'Machine 1', a: 2, b: 1, dir: 'lte', rhs: 80, sliderMax: 160, sliderStep: 10 },
+    { name: 'Machine 2', a: 1, b: 3, dir: 'lte', rhs: 80, sliderMax: 160, sliderStep: 10 },
+  ],
+};
+
+function applyStartingProblem() {
+  const sp = STARTING_PROBLEM;
+  document.getElementById('xName').value = sp.xLabel;
+  document.getElementById('yName').value = sp.yLabel;
+  document.getElementById('cx').value = sp.cx;
+  document.getElementById('cy').value = sp.cy;
+  document.getElementById('objType').value = sp.objType;
+  document.getElementById('cxSliderMax').value = sp.cxSliderMax ?? defaultSliderMax(sp.cx);
+  document.getElementById('cxSliderStep').value = sp.cxSliderStep ?? niceStepFor(sp.cxSliderMax ?? defaultSliderMax(sp.cx));
+  document.getElementById('cySliderMax').value = sp.cySliderMax ?? defaultSliderMax(sp.cy);
+  document.getElementById('cySliderStep').value = sp.cySliderStep ?? niceStepFor(sp.cySliderMax ?? defaultSliderMax(sp.cy));
+
+  constraints = [];
+  sp.constraints.forEach(c => addConstraintRow({
+    name: c.name, a: c.a, b: c.b, dir: c.dir, rhs: c.rhs,
+    sliderMax: c.sliderMax, sliderStep: c.sliderStep,
+  }));
+}
+
+// ---------- State ----------
+let constraints = []; // {id, name, a, b, dir, rhs, baseRhs}
+let objective = { cx: 30, cy: 20, baseCx: 30, baseCy: 20, type: 'max', cxSliderMax: 60, cxSliderStep: 1, cySliderMax: 40, cySliderStep: 1 };
+let sessionCode = '';
+
+function newSessionCode() {
+  const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+  let code = '';
+  for (let i = 0; i < 6; i++) code += chars[Math.floor(Math.random() * chars.length)];
+  sessionCode = code;
+  const tag = document.getElementById('sessionTag');
+  if (tag) tag.textContent = 'session code: ' + code;
+}
+newSessionCode();
+
+document.getElementById('cx').addEventListener('change', (e) => {
+  const v = parseFloat(e.target.value) || 0;
+  const m = defaultSliderMax(v);
+  document.getElementById('cxSliderMax').value = m;
+  document.getElementById('cxSliderStep').value = niceStepFor(m);
+});
+document.getElementById('cy').addEventListener('change', (e) => {
+  const v = parseFloat(e.target.value) || 0;
+  const m = defaultSliderMax(v);
+  document.getElementById('cySliderMax').value = m;
+  document.getElementById('cySliderStep').value = niceStepFor(m);
+});
+let xLabel = 'x', yLabel = 'y';
+let Xmax = 20, Ymax = 20;
+let nextId = 1;
+
+function niceStepFor(range) {
+  // choose a step (1,2,5,10,20,50,100...) that tends to divide evenly into round ranges
+  if (range <= 0) return 1;
+  const target = range / 20;
+  const mag = Math.pow(10, Math.floor(Math.log10(target)));
+  const norm = target / mag;
+  let step;
+  if (norm < 1.5) step = mag; else if (norm < 3.5) step = 2 * mag; else if (norm < 7.5) step = 5 * mag; else step = 10 * mag;
+  return step;
+}
+
+function defaultSliderMax(rhs) {
+  const base = rhs > 0 ? rhs * 2 : 20;
+  const step = niceStepFor(base);
+  return Math.ceil(base / step) * step;
+}
+
+function addConstraintRow(c) {
+  const id = nextId++;
+  const rhs = c.rhs ?? 10;
+  const sliderMax = c.sliderMax ?? defaultSliderMax(rhs);
+  constraints.push({
+    id,
+    name: c.name || ('Constraint ' + id),
+    a: c.a ?? 1,
+    b: c.b ?? 1,
+    dir: c.dir || 'lte',
+    rhs,
+    sliderMax,
+    sliderStep: c.sliderStep ?? niceStepFor(sliderMax),
+  });
+  renderConstraintList();
+}
+
+function renderConstraintList() {
+  const wrap = document.getElementById('constraintList');
+  wrap.innerHTML = '';
+  constraints.forEach((c, idx) => {
+    const card = document.createElement('div');
+    card.className = 'constraint-card';
+    card.innerHTML = `
+      <div class="title-row">
+        <span>Constraint ${idx + 1}</span>
+        ${constraints.length > 2 ? `<button class="remove-btn" data-id="${c.id}">remove</button>` : ''}
+      </div>
+      <label>Name (e.g. a resource)</label>
+      <input type="text" data-field="name" data-id="${c.id}" value="${c.name}">
+      <div class="row3" style="margin-top:6px;">
+        <div>
+          <label>coeff. on ${xLabel}</label>
+          <input type="number" data-field="a" data-id="${c.id}" value="${c.a}" step="0.5">
+        </div>
+        <div>
+          <label>coeff. on ${yLabel}</label>
+          <input type="number" data-field="b" data-id="${c.id}" value="${c.b}" step="0.5">
+        </div>
+        <div>
+          <label>direction</label>
+          <select data-field="dir" data-id="${c.id}">
+            <option value="lte" ${c.dir === 'lte' ? 'selected' : ''}>&le;</option>
+            <option value="gte" ${c.dir === 'gte' ? 'selected' : ''}>&ge;</option>
+          </select>
+        </div>
+        <div>
+          <label>RHS</label>
+          <input type="number" data-field="rhs" data-id="${c.id}" value="${c.rhs}" step="1">
+        </div>
+      </div>
+      <div class="slider-settings">
+        <div>
+          <label>Slider max</label>
+          <input type="number" data-field="sliderMax" data-id="${c.id}" value="${c.sliderMax}" step="1">
+        </div>
+        <div>
+          <label>Slider step</label>
+          <input type="number" data-field="sliderStep" data-id="${c.id}" value="${c.sliderStep}" step="0.1">
+        </div>
+      </div>
+    `;
+    wrap.appendChild(card);
+  });
+
+  wrap.querySelectorAll('input, select').forEach(el => {
+    el.addEventListener('change', (e) => {
+      const id = parseInt(e.target.dataset.id);
+      const field = e.target.dataset.field;
+      const c = constraints.find(c => c.id === id);
+      if (!c) return;
+      if (field === 'name') c.name = e.target.value;
+      else if (field === 'dir') c.dir = e.target.value;
+      else if (field === 'sliderStep') c.sliderStep = parseFloat(e.target.value) || 1;
+      else if (field === 'sliderMax') c.sliderMax = parseFloat(e.target.value) || 10;
+      else c[field] = parseFloat(e.target.value) || 0;
+    });
+  });
+
+  wrap.querySelectorAll('.remove-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const id = parseInt(btn.dataset.id);
+      constraints = constraints.filter(c => c.id !== id);
+      renderConstraintList();
+    });
+  });
+}
+
+document.getElementById('addConstraint').addEventListener('click', () => {
+  if (constraints.length >= 5) { alert('Maximum of 5 constraints.'); return; }
+  addConstraintRow({ name: '', a: 1, b: 1, dir: 'lte', rhs: 10 });
+});
+
+// initial load
+applyStartingProblem();
+
+// ---------- Build ----------
+document.getElementById('buildBtn').addEventListener('click', build);
+
+function build() {
+  newSessionCode();
+  xLabel = document.getElementById('xName').value.trim() || 'x';
+  yLabel = document.getElementById('yName').value.trim() || 'y';
+  objective.cx = parseFloat(document.getElementById('cx').value) || 0;
+  objective.cy = parseFloat(document.getElementById('cy').value) || 0;
+  objective.baseCx = objective.cx;
+  objective.baseCy = objective.cy;
+  objective.type = document.getElementById('objType').value;
+  objective.cxSliderMax = parseFloat(document.getElementById('cxSliderMax').value) || defaultSliderMax(objective.cx);
+  objective.cxSliderStep = parseFloat(document.getElementById('cxSliderStep').value) || 1;
+  objective.cySliderMax = parseFloat(document.getElementById('cySliderMax').value) || defaultSliderMax(objective.cy);
+  objective.cySliderStep = parseFloat(document.getElementById('cySliderStep').value) || 1;
+
+  constraints.forEach(c => { c.baseRhs = c.rhs; });
+
+  // determine viewport using each constraint's configured slider max, so graph doesn't rescale while dragging
+  let maxIntercept = 0;
+  constraints.forEach(c => {
+    const sliderMax = c.sliderMax > 0 ? c.sliderMax : (c.baseRhs > 0 ? c.baseRhs * 2 : 10);
+    if (c.a > 0) maxIntercept = Math.max(maxIntercept, sliderMax / c.a);
+    if (c.b > 0) maxIntercept = Math.max(maxIntercept, sliderMax / c.b);
+  });
+  if (maxIntercept <= 0) maxIntercept = 20;
+  Xmax = Ymax = Math.ceil(maxIntercept * 1.25 / 5) * 5;
+  if (Xmax < 10) Xmax = Ymax = 10;
+
+  renderSliders();
+  document.getElementById('slidersSection').style.display = 'block';
+  document.getElementById('summaryBox').style.display = 'grid';
+  document.getElementById('vertexTable').style.display = 'table';
+
+  render();
+}
+
+document.getElementById('resetBtn').addEventListener('click', () => {
+  constraints.forEach(c => { c.rhs = c.baseRhs; });
+  objective.cx = objective.baseCx;
+  objective.cy = objective.baseCy;
+  renderSliders();
+  render();
+});
+
+function renderSliders() {
+  const wrap = document.getElementById('sliders');
+  wrap.innerHTML = '';
+
+  constraints.forEach(c => {
+    const block = document.createElement('div');
+    block.className = 'slider-block';
+    block.innerHTML = `
+      <div class="slider-label"><span>${c.name}</span><b id="val_c${c.id}">${c.rhs}</b></div>
+      <input type="range" min="0" max="${c.sliderMax}" step="${c.sliderStep}" value="${c.rhs}" id="slider_c${c.id}">
+    `;
+    wrap.appendChild(block);
+  });
+
+  const objBlock = document.createElement('div');
+  objBlock.innerHTML = `
+    <div class="slider-block">
+      <div class="slider-label"><span>Profit/cost per unit of ${xLabel}</span><b id="val_cx">${objective.cx}</b></div>
+      <input type="range" min="0" max="${objective.cxSliderMax}" step="${objective.cxSliderStep}" value="${objective.cx}" id="slider_cx">
+    </div>
+    <div class="slider-block">
+      <div class="slider-label"><span>Profit/cost per unit of ${yLabel}</span><b id="val_cy">${objective.cy}</b></div>
+      <input type="range" min="0" max="${objective.cySliderMax}" step="${objective.cySliderStep}" value="${objective.cy}" id="slider_cy">
+    </div>
+  `;
+  wrap.appendChild(objBlock);
+
+  constraints.forEach(c => {
+    document.getElementById(`slider_c${c.id}`).addEventListener('input', (e) => {
+      c.rhs = parseFloat(e.target.value);
+      document.getElementById(`val_c${c.id}`).textContent = round2(c.rhs);
+      render();
+    });
+  });
+  document.getElementById('slider_cx').addEventListener('input', (e) => {
+    objective.cx = parseFloat(e.target.value);
+    document.getElementById('val_cx').textContent = round2(objective.cx);
+    render();
+  });
+  document.getElementById('slider_cy').addEventListener('input', (e) => {
+    objective.cy = parseFloat(e.target.value);
+    document.getElementById('val_cy').textContent = round2(objective.cy);
+    render();
+  });
+}
+
+function round2(v) { return Math.round(v * 100) / 100; }
+
+// ---------- Geometry engine ----------
+function getHalfPlanes() {
+  // returns array of {a,b,rhs,isReal,label} all in form a*x+b*y <= rhs
+  const hp = [];
+  constraints.forEach(c => {
+    if (c.dir === 'lte') {
+      hp.push({ a: c.a, b: c.b, rhs: c.rhs, isReal: true, label: c.name });
+    } else {
+      hp.push({ a: -c.a, b: -c.b, rhs: -c.rhs, isReal: true, label: c.name });
+    }
+  });
+  // non-negativity
+  hp.push({ a: -1, b: 0, rhs: 0, isReal: true, label: xLabel + ' ≥ 0' });
+  hp.push({ a: 0, b: -1, rhs: 0, isReal: true, label: yLabel + ' ≥ 0' });
+  // viewport bounds (not real)
+  hp.push({ a: 1, b: 0, rhs: Xmax, isReal: false, label: 'view' });
+  hp.push({ a: 0, b: 1, rhs: Ymax, isReal: false, label: 'view' });
+  return hp;
+}
+
+function intersect(h1, h2) {
+  const det = h1.a * h2.b - h2.a * h1.b;
+  if (Math.abs(det) < 1e-9) return null;
+  const x = (h1.rhs * h2.b - h2.rhs * h1.b) / det;
+  const y = (h1.a * h2.rhs - h2.a * h1.rhs) / det;
+  return { x, y };
+}
+
+function isFeasible(pt, hps, eps) {
+  return hps.every(h => h.a * pt.x + h.b * pt.y <= h.rhs + eps);
+}
+
+function computeVertices() {
+  const hps = getHalfPlanes();
+  const scale = Math.max(Xmax, Ymax);
+  const eps = scale * 1e-6;
+  const pts = [];
+
+  for (let i = 0; i < hps.length; i++) {
+    for (let j = i + 1; j < hps.length; j++) {
+      const p = intersect(hps[i], hps[j]);
+      if (!p) continue;
+      if (p.x < -eps || p.y < -eps) continue;
+      if (!isFeasible(p, hps, eps)) continue;
+      const isReal = hps[i].isReal && hps[j].isReal;
+      // binding constraint labels (only real, non-nonneg-dup)
+      const bindingLabels = [];
+      hps.forEach(h => {
+        if (h.isReal && Math.abs(h.a * p.x + h.b * p.y - h.rhs) < eps * 5) {
+          bindingLabels.push(h.label);
+        }
+      });
+      pts.push({ x: Math.max(0, p.x), y: Math.max(0, p.y), isReal, binding: bindingLabels });
+    }
+  }
+
+  // dedupe
+  const uniq = [];
+  pts.forEach(p => {
+    const dup = uniq.find(u => Math.abs(u.x - p.x) < eps * 10 && Math.abs(u.y - p.y) < eps * 10);
+    if (!dup) uniq.push(p);
+    else if (p.isReal && !dup.isReal) { dup.isReal = true; dup.binding = p.binding; }
+  });
+
+  if (uniq.length === 0) return { all: [], real: [] };
+
+  // sort by angle around centroid for polygon path
+  const cx = uniq.reduce((s, p) => s + p.x, 0) / uniq.length;
+  const cy = uniq.reduce((s, p) => s + p.y, 0) / uniq.length;
+  uniq.sort((a, b) => Math.atan2(a.y - cy, a.x - cx) - Math.atan2(b.y - cy, b.x - cx));
+
+  const real = uniq.filter(p => p.isReal);
+  real.forEach(p => { p.z = objective.cx * p.x + objective.cy * p.y; });
+  uniq.forEach(p => { if (p.z === undefined) p.z = objective.cx * p.x + objective.cy * p.y; });
+  return { all: uniq, real };
+}
+
+// ---------- Rendering ----------
+const canvas = document.getElementById('graph');
+const ctx = canvas.getContext('2d');
+const margin = { left: 65, right: 30, top: 30, bottom: 55 };
+const plotW = canvas.width - margin.left - margin.right;
+const plotH = canvas.height - margin.top - margin.bottom;
+
+function toPxX(x) { return margin.left + (x / Xmax) * plotW; }
+function toPxY(y) { return canvas.height - margin.bottom - (y / Ymax) * plotH; }
+
+function render() {
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+  ctx.fillStyle = '#ffffff';
+  ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+  drawGrid();
+
+  const { all, real } = computeVertices();
+
+  if (real.length === 0) {
+    drawAxes();
+    document.getElementById('warning').style.display = 'block';
+    document.getElementById('warning').textContent = 'No feasible region with these values — the constraints don\'t leave any point that satisfies all of them at once. Try relaxing a slider.';
+    document.getElementById('summaryBox').style.display = 'none';
+    document.getElementById('vertexTable').style.display = 'none';
+    return;
+  }
+
+  // shade feasible polygon
+  if (all.length >= 3) {
+    ctx.beginPath();
+    all.forEach((p, i) => {
+      const px = toPxX(p.x), py = toPxY(p.y);
+      if (i === 0) ctx.moveTo(px, py); else ctx.lineTo(px, py);
+    });
+    ctx.closePath();
+    ctx.fillStyle = 'rgba(47,111,94,0.14)';
+    ctx.fill();
+    ctx.strokeStyle = 'rgba(47,111,94,0.4)';
+    ctx.lineWidth = 1;
+    ctx.stroke();
+  }
+
+  drawAxes();
+  drawConstraintLines();
+
+  // objective values were already attached in computeVertices()
+  let optimal = real[0];
+  real.forEach(p => {
+    if (objective.type === 'max' ? p.z > optimal.z : p.z < optimal.z) optimal = p;
+  });
+
+  // unbounded check: compare best real vs best of all (incl viewport-only)
+  let boundedWarning = false;
+  if (all.length > 0) {
+    let bestAllZ = all[0].x * objective.cx + all[0].y * objective.cy;
+    all.forEach(p => {
+      const z = objective.cx * p.x + objective.cy * p.y;
+      if (objective.type === 'max' ? z > bestAllZ : z < bestAllZ) bestAllZ = z;
+    });
+    const diff = Math.abs(bestAllZ - optimal.z);
+    if (diff > Math.max(Math.abs(optimal.z), 1) * 0.01) boundedWarning = true;
+  }
+
+  document.getElementById('warning').style.display = boundedWarning ? 'block' : 'none';
+  if (boundedWarning) {
+    document.getElementById('warning').textContent = 'The feasible region may extend beyond this graph in the direction that improves the objective (it could be unbounded, or just bigger than the visible window). The "optimal" shown is the best point among the true extreme points found — double check by widening a constraint slider.';
+  }
+
+  // draw extreme points
+  real.forEach(p => {
+    const px = toPxX(p.x), py = toPxY(p.y);
+    const isOpt = p === optimal;
+    ctx.beginPath();
+    ctx.arc(px, py, isOpt ? 6.5 : 4, 0, Math.PI * 2);
+    ctx.fillStyle = isOpt ? '#8a3b2a' : '#3d5a4c';
+    ctx.fill();
+    if (isOpt) {
+      ctx.strokeStyle = '#8a3b2a';
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.arc(px, py, 11, 0, Math.PI * 2);
+      ctx.stroke();
+    }
+    ctx.font = isOpt ? 'bold 12px Inter, sans-serif' : '11px Inter, sans-serif';
+    ctx.fillStyle = isOpt ? '#8a3b2a' : '#4a5568';
+    const label = `(${round2(p.x)}, ${round2(p.y)})  Z=${round2(p.z)}`;
+    const tx = px + 10, ty = py - 10;
+    ctx.fillText(label, Math.min(tx, canvas.width - margin.right - ctx.measureText(label).width), Math.max(ty, margin.top + 12));
+  });
+
+  // iso-objective line through optimal
+  drawIsoLine(optimal.z);
+
+  updateSummary(optimal, real);
+  updateTable(real, optimal);
+}
+
+function drawGrid() {
+  ctx.strokeStyle = '#eeece5';
+  ctx.lineWidth = 1;
+  const stepX = niceStep(Xmax);
+  const stepY = niceStep(Ymax);
+  for (let x = 0; x <= Xmax + 1e-9; x += stepX) {
+    ctx.beginPath();
+    ctx.moveTo(toPxX(x), margin.top);
+    ctx.lineTo(toPxX(x), canvas.height - margin.bottom);
+    ctx.stroke();
+  }
+  for (let y = 0; y <= Ymax + 1e-9; y += stepY) {
+    ctx.beginPath();
+    ctx.moveTo(margin.left, toPxY(y));
+    ctx.lineTo(canvas.width - margin.right, toPxY(y));
+    ctx.stroke();
+  }
+}
+
+function niceStep(max) {
+  const raw = max / 8;
+  const mag = Math.pow(10, Math.floor(Math.log10(raw)));
+  const norm = raw / mag;
+  let step;
+  if (norm < 1.5) step = 1; else if (norm < 3.5) step = 2; else if (norm < 7.5) step = 5; else step = 10;
+  return step * mag;
+}
+
+function drawAxes() {
+  ctx.strokeStyle = '#1b2430';
+  ctx.lineWidth = 1.5;
+  ctx.beginPath();
+  ctx.moveTo(margin.left, canvas.height - margin.bottom);
+  ctx.lineTo(canvas.width - margin.right, canvas.height - margin.bottom);
+  ctx.moveTo(margin.left, margin.top);
+  ctx.lineTo(margin.left, canvas.height - margin.bottom);
+  ctx.stroke();
+
+  ctx.fillStyle = '#4a5568';
+  ctx.font = '11px "IBM Plex Mono", monospace';
+  const stepX = niceStep(Xmax), stepY = niceStep(Ymax);
+  for (let x = 0; x <= Xmax + 1e-9; x += stepX) {
+    ctx.fillText(Math.round(x), toPxX(x) - 6, canvas.height - margin.bottom + 16);
+  }
+  for (let y = 0; y <= Ymax + 1e-9; y += stepY) {
+    ctx.fillText(Math.round(y), margin.left - 32, toPxY(y) + 4);
+  }
+  ctx.font = 'bold 13px Inter, sans-serif';
+  ctx.fillStyle = '#1b2430';
+  ctx.fillText(xLabel, canvas.width - margin.right - 10, canvas.height - margin.bottom + 34);
+  ctx.save();
+  ctx.translate(16, margin.top + 10);
+  ctx.fillText(yLabel, 0, 0);
+  ctx.restore();
+}
+
+const lineColors = ['#2f6f5e', '#3b5f8a', '#8a5a2f', '#5a3b8a', '#8a2f5e'];
+
+function drawConstraintLines() {
+  constraints.forEach((c, idx) => {
+    // find two points of a*x+b*y=rhs within [0,Xmax]x[0,Ymax]
+    const pts = [];
+    if (Math.abs(c.b) > 1e-9) {
+      const y0 = c.rhs / c.b;
+      if (y0 >= -1e-6 && y0 <= Ymax + 1e-6) pts.push({ x: 0, y: y0 });
+      const yX = (c.rhs - c.a * Xmax) / c.b;
+      if (yX >= -1e-6 && yX <= Ymax + 1e-6) pts.push({ x: Xmax, y: yX });
+    }
+    if (Math.abs(c.a) > 1e-9) {
+      const x0 = c.rhs / c.a;
+      if (x0 >= -1e-6 && x0 <= Xmax + 1e-6) pts.push({ x: x0, y: 0 });
+      const xY = (c.rhs - c.b * Ymax) / c.a;
+      if (xY >= -1e-6 && xY <= Xmax + 1e-6) pts.push({ x: xY, y: Ymax });
+    }
+    if (pts.length < 2) return;
+    // pick the two most distant points
+    let best = [pts[0], pts[1]], bestD = -1;
+    for (let i = 0; i < pts.length; i++) for (let j = i + 1; j < pts.length; j++) {
+      const d = (pts[i].x - pts[j].x) ** 2 + (pts[i].y - pts[j].y) ** 2;
+      if (d > bestD) { bestD = d; best = [pts[i], pts[j]]; }
+    }
+    const color = lineColors[idx % lineColors.length];
+    ctx.strokeStyle = color;
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.moveTo(toPxX(best[0].x), toPxY(best[0].y));
+    ctx.lineTo(toPxX(best[1].x), toPxY(best[1].y));
+    ctx.stroke();
+
+    // label near midpoint, offset
+    const mx = (best[0].x + best[1].x) / 2, my = (best[0].y + best[1].y) / 2;
+    ctx.fillStyle = color;
+    ctx.font = '11.5px Inter, sans-serif';
+    const dirSym = c.dir === 'lte' ? '≤' : '≥';
+    ctx.fillText(`${c.name} (${dirSym} ${round2(c.rhs)})`, toPxX(mx) + 6, toPxY(my) - 6 - idx * 0);
+  });
+}
+
+function drawIsoLine(z) {
+  const { cx, cy } = objective;
+  if (Math.abs(cx) < 1e-9 && Math.abs(cy) < 1e-9) return;
+  const pts = [];
+  if (Math.abs(cy) > 1e-9) {
+    const y0 = z / cy;
+    if (y0 >= -1e-6 && y0 <= Ymax + 1e-6) pts.push({ x: 0, y: y0 });
+    const yX = (z - cx * Xmax) / cy;
+    if (yX >= -1e-6 && yX <= Ymax + 1e-6) pts.push({ x: Xmax, y: yX });
+  }
+  if (Math.abs(cx) > 1e-9) {
+    const x0 = z / cx;
+    if (x0 >= -1e-6 && x0 <= Xmax + 1e-6) pts.push({ x: x0, y: 0 });
+    const xY = (z - cy * Ymax) / cx;
+    if (xY >= -1e-6 && xY <= Xmax + 1e-6) pts.push({ x: xY, y: Ymax });
+  }
+  if (pts.length < 2) return;
+  let best = [pts[0], pts[1]], bestD = -1;
+  for (let i = 0; i < pts.length; i++) for (let j = i + 1; j < pts.length; j++) {
+    const d = (pts[i].x - pts[j].x) ** 2 + (pts[i].y - pts[j].y) ** 2;
+    if (d > bestD) { bestD = d; best = [pts[i], pts[j]]; }
+  }
+  ctx.save();
+  ctx.setLineDash([6, 4]);
+  ctx.strokeStyle = '#8a3b2a';
+  ctx.lineWidth = 2;
+  ctx.beginPath();
+  ctx.moveTo(toPxX(best[0].x), toPxY(best[0].y));
+  ctx.lineTo(toPxX(best[1].x), toPxY(best[1].y));
+  ctx.stroke();
+  ctx.restore();
+}
+
+function updateSummary(optimal, real) {
+  document.getElementById('sumXY').textContent = `${xLabel}=${round2(optimal.x)}, ${yLabel}=${round2(optimal.y)}`;
+  document.getElementById('sumZ').textContent = round2(optimal.z);
+  document.getElementById('sumBinding').textContent = optimal.binding.length ? optimal.binding.join(', ') : 'none';
+}
+
+function updateTable(real, optimal) {
+  const body = document.getElementById('vertexTableBody');
+  body.innerHTML = '';
+  real.slice().sort((a, b) => b.z - a.z).forEach((p, i) => {
+    const tr = document.createElement('tr');
+    if (p === optimal) tr.className = 'optimal-row';
+    tr.innerHTML = `<td>${p === optimal ? 'Optimal' : 'Point ' + (i + 1)}</td><td>${round2(p.x)}</td><td>${round2(p.y)}</td><td>${round2(p.z)}</td><td>${p.binding.join(', ') || 'none'}</td>`;
+    body.appendChild(tr);
+  });
+}
+
+// ---------- Watermark / identity ----------
+function requireName() {
+  const name = document.getElementById('studentName').value.trim();
+  if (!name) {
+    alert('Enter your name or student ID at the top of the page before saving or copying results.');
+    return null;
+  }
+  return name;
+}
+
+function stampLine(name) {
+  const ts = new Date().toLocaleString();
+  return `${name}  ·  session ${sessionCode}  ·  ${ts}`;
+}
+
+function getWatermarkedCanvas(name) {
+  const out = document.createElement('canvas');
+  out.width = canvas.width;
+  out.height = canvas.height + 26;
+  const octx = out.getContext('2d');
+  octx.fillStyle = '#ffffff';
+  octx.fillRect(0, 0, out.width, out.height);
+  octx.drawImage(canvas, 0, 0);
+  octx.fillStyle = '#7a5c33';
+  octx.font = '11px "IBM Plex Mono", monospace';
+  octx.fillText(stampLine(name), 10, out.height - 8);
+  return out;
+}
+
+function showToast(msg) {
+  const toast = document.getElementById('toast');
+  toast.textContent = msg || 'Copied to clipboard';
+  toast.classList.add('show');
+  setTimeout(() => toast.classList.remove('show'), 1600);
+}
+
+// ---------- Actions ----------
+document.getElementById('exportBtn').addEventListener('click', () => {
+  const name = requireName();
+  if (!name) return;
+  const out = getWatermarkedCanvas(name);
+  const link = document.createElement('a');
+  link.download = `lp-scenario-${sessionCode}.png`;
+  link.href = out.toDataURL('image/png');
+  link.click();
+});
+
+document.getElementById('copyImgBtn').addEventListener('click', async () => {
+  const name = requireName();
+  if (!name) return;
+  const out = getWatermarkedCanvas(name);
+  try {
+    out.toBlob(async (blob) => {
+      await navigator.clipboard.write([new ClipboardItem({ 'image/png': blob })]);
+      showToast('Image copied — paste it into your document');
+    });
+  } catch (err) {
+    alert('Your browser blocked copying the image directly (this can happen when the page is opened as a local file or inside some embeds). Use "Download graph as PNG" instead, then insert that file into your document.');
+  }
+});
+
+function buildSummaryText(name) {
+  const { real } = computeVertices();
+  let text = `LP Explorer scenario — ${stampLine(name)}\n\n`;
+  text += `Objective: ${objective.type === 'max' ? 'Maximize' : 'Minimize'} ${objective.cx}${xLabel} + ${objective.cy}${yLabel}\n`;
+  text += `Constraints:\n`;
+  constraints.forEach(c => {
+    text += `  ${c.name}: ${c.a}${xLabel} + ${c.b}${yLabel} ${c.dir === 'lte' ? '≤' : '≥'} ${c.rhs}\n`;
+  });
+  text += `\nPoint\tx\ty\tZ\tBinding constraints\n`;
+  real.slice().sort((a, b) => b.z - a.z).forEach((p, i) => {
+    text += `${i === 0 ? 'Optimal' : 'Point ' + (i + 1)}\t${round2(p.x)}\t${round2(p.y)}\t${round2(p.z)}\t${p.binding.join(', ') || 'none'}\n`;
+  });
+  return text;
+}
+
+document.getElementById('copyBtn').addEventListener('click', () => {
+  const name = requireName();
+  if (!name) return;
+  const text = buildSummaryText(name);
+  const ta = document.getElementById('summaryTextarea');
+  ta.value = text;
+  document.getElementById('summaryModal').classList.add('show');
+  ta.focus();
+  ta.select();
+  navigator.clipboard.writeText(text).catch(() => { /* fallback is the visible textarea */ });
+});
+
+document.getElementById('modalCopyBtn').addEventListener('click', () => {
+  const ta = document.getElementById('summaryTextarea');
+  ta.select();
+  navigator.clipboard.writeText(ta.value).then(() => showToast()).catch(() => {
+    document.execCommand('copy');
+    showToast();
+  });
+});
+document.getElementById('modalCloseBtn').addEventListener('click', () => {
+  document.getElementById('summaryModal').classList.remove('show');
+});
+
+// initial build
+build();
+</script>
+</body>
+</html>
